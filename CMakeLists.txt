@@ -48,6 +48,10 @@ install(TARGETS
 ################ INSTALL LAUNCH, ETC #################
 install(DIRECTORY
   # add directories here
+  launch
+  config
+  rviz
+  worlds
   DESTINATION share/${PROJECT_NAME})
 
 ament_package()
