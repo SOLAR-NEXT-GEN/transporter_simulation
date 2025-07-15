@@ -1,0 +1,29 @@
+controller_manager:
+  ros__parameters:
+    update_rate: 100
+    use_sim_time: true
+    
+    left_hinge_controller:
+      type: position_controllers/JointGroupPositionController
+      
+    right_hinge_controller:
+      type: position_controllers/JointGroupPositionController
+      
+    joint_state_broadcaster:
+      type: joint_state_broadcaster/JointStateBroadcaster
+
+left_hinge_controller:
+  ros__parameters:
+    use_sim_time: true
+    joints:
+      - left_hinge
+
+right_hinge_controller:
+  ros__parameters:
+    use_sim_time: true
+    joints:
+      - right_hinge
+
+joint_state_broadcaster:
+  ros__parameters:
+    use_sim_time: true

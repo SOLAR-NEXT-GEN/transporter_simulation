@@ -14,6 +14,10 @@
     <color rgba="1 1 1 1"/>
   </material>
 
+  <material name="red">
+    <color rgba="0.8 0 0 1"/>
+  </material>
+
   <!-- Base Footprint - Robot's ground projection -->
   <link name="base_footprint"/>
 
@@ -148,6 +152,68 @@
     <origin xyz="-0.25 0 -0.15" rpy="0 0 0"/>
   </joint>
 
+  <!-- Left Hinge Link -->
+  <link name="left_hinge_link">
+    <visual>
+      <geometry>
+        <cylinder radius="0.03" length="0.5"/>
+      </geometry>
+      <origin xyz="0 0 0.25" rpy="0 0 0"/>
+      <material name="red"/>
+    </visual>
+    <collision>
+      <geometry>
+        <cylinder radius="0.03" length="0.5"/>
+      </geometry>
+      <origin xyz="0 0 0.25" rpy="0 0 0"/>
+    </collision>
+    <inertial>
+      <mass value="0.5"/>
+      <origin xyz="0 0 0.25" rpy="0 0 0"/>
+      <inertia ixx="0.011" ixy="0" ixz="0" iyy="0.011" iyz="0" izz="0.0002"/>
+    </inertial>
+  </link>
+
+  <joint name="left_hinge" type="revolute">
+    <parent link="base_link"/>
+    <child link="left_hinge_link"/>
+    <origin xyz="0 0.2 0.1" rpy="0 0 0"/>
+    <axis xyz="1 0 0"/>
+    <limit lower="-2.217" upper="0" effort="20" velocity="1"/>
+    <dynamics damping="5.0" friction="1.0"/>
+  </joint>
+
+  <!-- Right Hinge Link -->
+  <link name="right_hinge_link">
+    <visual>
+      <geometry>
+        <cylinder radius="0.03" length="0.5"/>
+      </geometry>
+      <origin xyz="0 0 0.25" rpy="0 0 0"/>
+      <material name="red"/>
+    </visual>
+    <collision>
+      <geometry>
+        <cylinder radius="0.03" length="0.5"/>
+      </geometry>
+      <origin xyz="0 0 0.25" rpy="0 0 0"/>
+    </collision>
+    <inertial>
+      <mass value="0.5"/>
+      <origin xyz="0 0 0.25" rpy="0 0 0"/>
+      <inertia ixx="0.011" ixy="0" ixz="0" iyy="0.011" iyz="0" izz="0.0002"/>
+    </inertial>
+  </link>
+
+  <joint name="right_hinge" type="revolute">
+    <parent link="base_link"/>
+    <child link="right_hinge_link"/>
+    <origin xyz="0 -0.2 0.1" rpy="0 0 0"/>
+    <axis xyz="1 0 0"/>
+    <limit lower="0" upper="2.217" effort="20" velocity="1"/>
+    <dynamics damping="5.0" friction="1.0"/>
+  </joint>
+
   <!-- GPS Link -->
   <link name="gps_link">
     <visual>
@@ -269,6 +335,44 @@
     <material>Gazebo/White</material>
     <mu1>0.01</mu1>
     <mu2>0.01</mu2>
+  </gazebo>
+
+  <gazebo reference="left_hinge_link">
+    <material>Gazebo/Red</material>
+  </gazebo>
+
+  <gazebo reference="right_hinge_link">
+    <material>Gazebo/Red</material>
+  </gazebo>
+  
+  <!-- ros2_control hardware interface -->
+  <ros2_control name="GazeboSystem" type="system">
+    <hardware>
+      <plugin>gazebo_ros2_control/GazeboSystem</plugin>
+    </hardware>
+    
+    <!-- Left Hinge -->
+    <joint name="left_hinge">
+      <command_interface name="position"/>
+      <state_interface name="position"/>
+      <state_interface name="velocity"/>
+      <state_interface name="effort"/>
+    </joint>
+
+    <!-- Right Hinge -->
+    <joint name="right_hinge">
+      <command_interface name="position"/>
+      <state_interface name="position"/>
+      <state_interface name="velocity"/>
+      <state_interface name="effort"/>
+    </joint>
+  </ros2_control>
+
+  <!-- Gazebo ros2_control plugin -->
+  <gazebo>
+    <plugin filename="libgazebo_ros2_control.so" name="gazebo_ros2_control">
+      <parameters>$(find transporter_simulation)/config/controllers_hinge.yaml</parameters>
+    </plugin>
   </gazebo>
 
 </robot>

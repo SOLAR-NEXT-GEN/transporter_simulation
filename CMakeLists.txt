@@ -53,6 +53,7 @@ install(DIRECTORY
   rviz
   worlds
   urdf
+  config
   DESTINATION share/${PROJECT_NAME})
 
 ament_package()

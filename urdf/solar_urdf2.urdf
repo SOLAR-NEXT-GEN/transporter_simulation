@@ -1,0 +1,318 @@
+<robot name="transporter_description">
+
+  <!-- BASE LINK -->
+  <link name="base_link">
+    <inertial>
+      <origin xyz="0.00034798 -0.0013381 0.4763" rpy="0 0 0" />
+      <mass value="158.02" />
+      <inertia ixx="15.986" ixy="-1.8949E-06" ixz="2.5524E-07" 
+               iyy="16.291" iyz="3.2616E-06" izz="31.173" />
+    </inertial>
+    
+    <visual>
+      <origin xyz="0 0 0" rpy="0 0 0" />
+      <geometry>
+        <mesh filename="package://transporter_description/meshes/base_link.STL" />
+      </geometry>
+      <material name="">
+        <color rgba="0.79216 0.81961 0.93333 1" />
+      </material>
+    </visual>
+    
+    <collision>
+      <origin xyz="0 0 0.3" rpy="0 0 0" />
+      <geometry>
+        <box size="1.2 3.0 0.4" />
+      </geometry>
+    </collision>
+  </link>
+
+  <!-- TEEN1 LINK -->
+  <link name="TEEN1">
+    <inertial>
+      <origin xyz="-0.00365 -0.19615 -0.55406" rpy="-0.0857556573 0 0" />
+      <mass value="5.0574" />
+      <inertia ixx="0.31243" ixy="-5.1789E-06" ixz="2.5004E-06" 
+               iyy="0.28281" iyz="-0.1149" izz="0.080034" />
+    </inertial>
+    
+    <visual>
+      <origin xyz="-0.23 0 0" rpy="-0.0857556573 0 0" />
+      <geometry>
+        <mesh filename="package://transporter_description/meshes/TEEN1.STL" />
+      </geometry>
+      <material name="">
+        <color rgba="0.79216 0.81961 0.93333 1" />
+      </material>
+    </visual>
+    
+    <collision>
+      <origin xyz="0 0 -0.2" rpy="0 0 0" />
+      <geometry>
+        <cylinder radius="0.08" length="0.4" />
+      </geometry>
+    </collision>
+  </link>
+
+  <!-- TEEN1 JOINT -->
+  <joint name="TEEN1_joint" type="revolute">
+    <origin xyz="0.765 2.1833 0.45859" rpy="1.570755657 0 0" />
+    <parent link="base_link" />
+    <child link="TEEN1" />
+    <axis xyz="1 0 0" />
+    <limit lower="0" upper="1" effort="1E+15" velocity="1E+15" />
+  </joint>
+
+  <!-- TEEN2 LINK -->
+  <link name="TEEN2">
+    <inertial>
+      <origin xyz="-0.000000141892452 -0.195331715910894 -0.556488088979497" rpy="-0.0857556573 0 0" />
+      <mass value="5.16421914907212" />
+      <inertia ixx="0.317678093720516" ixy="2.19363902142112E-08" ixz="6.58000038536239E-08" 
+               iyy="0.287097452757315" iyz="-0.116881491319671" izz="0.0810167628627974" />
+    </inertial>
+    
+    <visual>
+      <origin xyz="0.23 0 0" rpy="-0.0857556573 0 0" />
+      <geometry>
+        <mesh filename="package://transporter_description/meshes/TEEN2.STL" />
+      </geometry>
+      <material name="">
+        <color rgba="0.792156862745098 0.819607843137255 0.933333333333333 1" />
+      </material>
+    </visual>
+    
+    <collision>
+      <origin xyz="0 0 -0.3" rpy="0 0 0" />
+      <geometry>
+        <cylinder radius="0.15" length="0.8" />
+      </geometry>
+    </collision>
+  </link>
+
+  <!-- TEEN2 JOINT -->
+  <joint name="TEEN2_joint" type="revolute">
+    <origin xyz="-0.765 2.1833 0.45859" rpy="1.570755657 0 0" />
+    <parent link="base_link" />
+    <child link="TEEN2" />
+    <axis xyz="1 0 0" />
+    <limit lower="0" upper="1" effort="1E+15" velocity="1E+15" />
+  </joint>
+
+  <!-- TEEN3 LINK -->
+  <link name="TEEN3">
+    <inertial>
+      <origin xyz="0 -0.19533 -0.55649" rpy="-0.0857556573 0 0" />
+      <mass value="5.1642" />
+      <inertia ixx="0.31768" ixy="2.2393E-08" ixz="6.5974E-08" 
+               iyy="0.2871" iyz="-0.11688" izz="0.081017" />
+    </inertial>
+    
+    <visual>
+      <origin xyz="0.23 0 0" rpy="-0.0857556573 0 0" />
+      <geometry>
+        <mesh filename="package://transporter_description/meshes/TEEN3.STL" />
+      </geometry>
+      <material name="">
+        <color rgba="0.79216 0.81961 0.93333 1" />
+      </material>
+    </visual>
+    
+    <collision>
+      <origin xyz="0 0 -0.3" rpy="0 0 0" />
+      <geometry>
+        <cylinder radius="0.15" length="0.8" />
+      </geometry>
+    </collision>
+  </link>
+
+  <!-- TEEN3 JOINT -->
+  <joint name="TEEN3_joint" type="revolute">
+    <origin xyz="0.765 -2.1833 0.45859" rpy="1.570755657 0 3.1416" />
+    <parent link="base_link" />
+    <child link="TEEN3" />
+    <axis xyz="1 0 0" />
+    <limit lower="0" upper="1" effort="1E+15" velocity="1E+15" />
+  </joint>
+
+  <!-- TEEN4 LINK -->
+  <link name="TEEN4">
+    <inertial>
+      <origin xyz="-1.4210116e-7 -0.195331715605971 -0.556488088219832" rpy="-0.0857556573 0 0" />
+      <mass value="5.16421914009789" />
+      <inertia ixx="0.317678093585832" ixy="2.24023556844291E-08" ixz="6.59911198811905E-08" 
+               iyy="0.28709745108947" iyz="-0.116881491266852" izz="0.0810167610793654" />
+    </inertial>
+    
+    <visual>
+      <origin xyz="-0.23 0 0" rpy="-0.0857556573 0 0" />
+      <geometry>
+        <mesh filename="package://transporter_description/meshes/TEEN4.STL" />
+      </geometry>
+      <material name="">
+        <color rgba="0.792156862745098 0.819607843137255 0.933333333333333 1" />
+      </material>
+    </visual>
+    
+    <collision>
+      <origin xyz="0 0 -0.3" rpy="0 0 0" />
+      <geometry>
+        <cylinder radius="0.15" length="0.8" />
+      </geometry>
+    </collision>
+  </link>
+
+  <!-- TEEN4 JOINT -->
+  <joint name="TEEN4_joint" type="revolute">
+    <origin xyz="-0.765 -2.1833 0.45859" rpy="1.570755657 0 3.1416" />
+    <parent link="base_link" />
+    <child link="TEEN4" />
+    <axis xyz="1 0 0" />
+    <limit lower="0" upper="1" effort="1E+15" velocity="1E+15" />
+  </joint>
+
+  <!-- WHEEL1 LINK -->
+  <link name="WHEEL1">
+    <inertial>
+      <origin xyz="3.3307E-16 0 -0.033417" rpy="0 0 0" />
+      <mass value="4.0671" />
+      <inertia ixx="0.010735" ixy="-4.1666E-18" ixz="2.6989E-19" 
+               iyy="0.010735" iyz="2.4171E-19" izz="0.020875" />
+    </inertial>
+    
+    <visual>
+      <origin xyz="0 0 0" rpy="0 0 0" />
+      <geometry>
+        <mesh filename="package://transporter_description/meshes/WHEEL1.STL" />
+      </geometry>
+      <material name="">
+        <color rgba="0.64706 0.61961 0.58824 1" />
+      </material>
+    </visual>
+    
+    <collision>
+      <origin xyz="0 0 0" rpy="0 0 0" />
+      <geometry>
+        <cylinder radius="0.15" length="0.1" />
+      </geometry>
+    </collision>
+  </link>
+
+  <!-- WHEEL1 JOINT -->
+  <joint name="WHEEL1_joint" type="continuous">
+    <origin xyz="0.685625 1.866 0.12723" rpy="1.5708 0.00064167 0" />
+    <parent link="base_link" />
+    <child link="WHEEL1" />
+    <axis xyz="0 0 -1" />
+    <limit lower="1E-15" upper="1E+15" effort="1E+15" velocity="1E+15" />
+  </joint>
+
+  <!-- WHEEL2 LINK -->
+  <link name="WHEEL2">
+    <inertial>
+      <origin xyz="3.3307E-16 2.7756E-17 -0.033417" rpy="0 0 0" />
+      <mass value="4.0671" />
+      <inertia ixx="0.010735" ixy="-6.4718E-18" ixz="2.2174E-19" 
+               iyy="0.010735" iyz="2.9921E-20" izz="0.020875" />
+    </inertial>
+    
+    <visual>
+      <origin xyz="0 0 0" rpy="0 0 0" />
+      <geometry>
+        <mesh filename="package://transporter_description/meshes/WHEEL2.STL" />
+      </geometry>
+      <material name="">
+        <color rgba="0.64706 0.61961 0.58824 1" />
+      </material>
+    </visual>
+    
+    <collision>
+      <origin xyz="0 0 0" rpy="0 0 0" />
+      <geometry>
+        <cylinder radius="0.2" length="0.15" />
+      </geometry>
+    </collision>
+  </link>
+
+  <!-- WHEEL2 JOINT -->
+  <joint name="WHEEL2_joint" type="continuous">
+    <origin xyz="-0.685625 1.866 0.12723" rpy="1.5708 0.00064167 0" />
+    <parent link="base_link" />
+    <child link="WHEEL2" />
+    <axis xyz="0 0 1" />
+    <limit lower="1E-15" upper="1E+15" effort="1E+15" velocity="1E+15" />
+  </joint>
+
+  <!-- WHEEL3 LINK -->
+  <link name="WHEEL3">
+    <inertial>
+      <origin xyz="3.0531E-16 2.7756E-17 0.025583" rpy="0 0 0" />
+      <mass value="4.0671" />
+      <inertia ixx="0.010735" ixy="-2.9456E-18" ixz="5.1096E-19" 
+               iyy="0.010735" iyz="2.1209E-19" izz="0.020875" />
+    </inertial>
+    
+    <visual>
+      <origin xyz="0 0 0" rpy="0 0 0" />
+      <geometry>
+        <mesh filename="package://transporter_description/meshes/WHEEL3.STL" />
+      </geometry>
+      <material name="">
+        <color rgba="0.64706 0.61961 0.58824 1" />
+      </material>
+    </visual>
+    
+    <collision>
+      <origin xyz="0 0 0" rpy="0 0 0" />
+      <geometry>
+        <cylinder radius="0.2" length="0.15" />
+      </geometry>
+    </collision>
+  </link>
+
+  <!-- WHEEL3 JOINT -->
+  <joint name="WHEEL3_joint" type="continuous">
+    <origin xyz="0.685625 -1.875 0.12723" rpy="1.5708 0.00064167 0" />
+    <parent link="base_link" />
+    <child link="WHEEL3" />
+    <axis xyz="0 0 -1" />
+    <limit lower="1E-15" upper="1E+15" effort="1E+15" velocity="1E+15" />
+  </joint>
+
+  <!-- WHEEL4 LINK -->
+  <link name="WHEEL4">
+    <inertial>
+      <origin xyz="3.6082E-16 2.7756E-17 0.025583" rpy="0 0 0" />
+      <mass value="4.0671" />
+      <inertia ixx="0.010735" ixy="-1.4658E-18" ixz="4.4725E-19" 
+               iyy="0.010735" iyz="1.6903E-19" izz="0.020875" />
+    </inertial>
+    
+    <visual>
+      <origin xyz="0 0 0" rpy="0 0 0" />
+      <geometry>
+        <mesh filename="package://transporter_description/meshes/WHEEL4.STL" />
+      </geometry>
+      <material name="">
+        <color rgba="0.64706 0.61961 0.58824 1" />
+      </material>
+    </visual>
+    
+    <collision>
+      <origin xyz="0 0 0" rpy="0 0 0" />
+      <geometry>
+        <cylinder radius="0.2" length="0.15" />
+      </geometry>
+    </collision>
+  </link>
+
+  <!-- WHEEL4 JOINT -->
+  <joint name="WHEEL4_joint" type="continuous">
+    <origin xyz="-0.685625 -1.875 0.12723" rpy="1.5708 0.00064167 0" />
+    <parent link="base_link" />
+    <child link="WHEEL4" />
+    <axis xyz="0 0 -1" />
+    <limit lower="1E-15" upper="1E+15" effort="1E+15" velocity="1E+15" />
+  </joint>
+
+</robot>

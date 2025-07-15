@@ -6,7 +6,7 @@ from launch.launch_description_sources import PythonLaunchDescriptionSource
 from launch.substitutions import Command, LaunchConfiguration, PythonExpression
 from launch_ros.actions import Node
 from launch_ros.substitutions import FindPackageShare
-from ament_index_python.packages import get_package_prefix
+from ament_index_python.packages import get_package_prefix, get_package_share_directory
 
 def generate_launch_description():
     # Constants for paths to different files and folders
@@ -34,6 +34,10 @@ def generate_launch_description():
     default_rviz_config_path = os.path.join(pkg_share, rviz_config_file_path)
     world_path = os.path.join(pkg_share, 'worlds', world_file)
     gazebo_models_path = os.path.join(pkg_share, gazebo_models_path)
+
+    # Get controller config path
+    simulation_share = get_package_share_directory('transporter_simulation')
+    controllers_config = os.path.join(simulation_share, 'config', 'controllers_hinge.yaml')
 
     # Launch configuration variables specific to simulation
     use_sim_time = LaunchConfiguration('use_sim_time', default='true')
@@ -104,9 +108,22 @@ def generate_launch_description():
         default_value=world_path,
         description='Full path to the world model file to load')
 
-    # Read URDF file content
+    # Verify controller config file exists
+    if not os.path.isfile(controllers_config):
+        raise FileNotFoundError(f"controllers_hinge.yaml not found at: {controllers_config}")
+
+    # Read URDF file and replace the controllers path
     with open(default_urdf_model_path, 'r') as infp:
         robot_description_content = infp.read()
+
+    # Replace the placeholder path with the actual path
+    robot_description_content = robot_description_content.replace(
+        '$(find transporter_simulation)/config/controllers_hinge.yaml',
+        controllers_config
+    )
+
+    print(f"Controllers config path: {controllers_config}")
+    print("Controller config exists:", os.path.exists(controllers_config))
 
     # Subscribe to the joint states of the robot, and publish the 3D pose of each link.    
     start_robot_state_publisher_cmd = Node(
