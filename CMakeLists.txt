@@ -28,6 +28,7 @@ ament_python_install_package(${PROJECT_NAME})
 # Install Python executables
 install(PROGRAMS
   scripts/dummy_script.py
+  scripts/sim_joy.py
   DESTINATION lib/${PROJECT_NAME}
 )
 
@@ -49,9 +50,9 @@ install(TARGETS
 install(DIRECTORY
   # add directories here
   launch
-  config
   rviz
   worlds
+  urdf
   DESTINATION share/${PROJECT_NAME})
 
 ament_package()
