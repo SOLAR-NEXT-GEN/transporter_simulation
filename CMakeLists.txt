@@ -29,6 +29,7 @@ ament_python_install_package(${PROJECT_NAME})
 install(PROGRAMS
   scripts/dummy_script.py
   scripts/sim_joy.py
+  scripts/sim_mani.py
   DESTINATION lib/${PROJECT_NAME}
 )
 

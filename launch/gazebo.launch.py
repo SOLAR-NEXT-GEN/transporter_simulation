@@ -20,10 +20,10 @@ def generate_launch_description():
     # Spawn robot at desired position in Gazebo
     # Since the world file already has spherical_coordinates set to our datum,
     # these coordinates will be properly aligned with the GPS/OSM coordinate system
-    spawn_x_val = '4.0'  # East offset from datum
-    spawn_y_val = '-2.0'  # North offset from datum  
+    spawn_x_val = '0.0'  # East offset from datum
+    spawn_y_val = '0.0'  # North offset from datum  
     spawn_z_val = '0.01'
-    spawn_yaw_val = '0.75'
+    spawn_yaw_val = '0.0'
 
     ############ You do not need to change anything below this line #############
 
