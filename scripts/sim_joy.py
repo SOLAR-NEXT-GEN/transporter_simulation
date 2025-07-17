@@ -4,7 +4,7 @@ import rclpy
 from rclpy.node import Node
 from sensor_msgs.msg import Joy
 from geometry_msgs.msg import Twist
-from std_msgs.msg import Float64MultiArray
+from std_msgs.msg import Float64MultiArray, Bool
 
 
 class DiffJoyControl(Node):
@@ -26,6 +26,9 @@ class DiffJoyControl(Node):
         self.left_hinge_pos = 0.0
         self.right_hinge_pos = 0.0
         
+        # Triangle button state tracking
+        self.triangle_button_pressed = False
+        
         # Create publisher for cmd_vel topic
         self.twist_pub = self.create_publisher(Twist, 'cmd_vel', 10)
         
@@ -41,6 +44,9 @@ class DiffJoyControl(Node):
             10
         )
         
+        # Create publisher for octopus topic (triangle button status)
+        self.octopus_pub = self.create_publisher(Bool, '/octopus', 10)
+        
         # Create subscriber for joy topic
         self.joy_sub = self.create_subscription(
             Joy,
@@ -49,14 +55,18 @@ class DiffJoyControl(Node):
             10
         )
         
+        # Timer for publishing octopus at 50Hz
+        self.octopus_timer = self.create_timer(0.02, self.publish_octopus)
+        
         # Initialize messages
         self.twist_msg = Twist()
         self.left_hinge_msg = Float64MultiArray()
         self.right_hinge_msg = Float64MultiArray()
+        self.octopus_msg = Bool()
         
         # Button press tracking to prevent continuous triggering
-        self.prev_button_2 = False
-        self.prev_button_0 = False
+        self.prev_button_3 = False
+        self.prev_button_1 = False
         
         self.get_logger().info('Transporter Joy node initialized')
         self.get_logger().info(f'Linear velocity: {self.LINEAR_VEL} m/s')
@@ -64,9 +74,16 @@ class DiffJoyControl(Node):
         self.get_logger().info('Controls:')
         self.get_logger().info('  Left stick Y (axis[1]): Forward/Backward')
         self.get_logger().info('  Right stick X (axis[3]): Left/Right turn')
-        self.get_logger().info('  Button[2]: Raise hinges to top position')
-        self.get_logger().info('  Button[0]: Lower hinges to bottom position')
+        self.get_logger().info('  Button[2]: Stop signal (triangle)')
+        self.get_logger().info('  Button[3]: Raise hinges to top position')
+        self.get_logger().info('  Button[1]: Lower hinges to bottom position')
+        self.get_logger().info('Publishing triangle button status on /octopus at 50Hz')
         self.get_logger().info('Listening for joystick input on /joy topic...')
+    
+    def publish_octopus(self):
+        """Publish triangle button status at 50Hz"""
+        self.octopus_msg.data = self.triangle_button_pressed
+        self.octopus_pub.publish(self.octopus_msg)
     
     def clamp_hinge_position(self, position, min_val, max_val):
         """Clamp hinge position within limits"""
@@ -99,8 +116,9 @@ class DiffJoyControl(Node):
             < 0: -Wz (turn right)
             
         Button mapping:
-        - button[2]: Raise both hinges to top position
-        - button[0]: Lower both hinges to bottom position
+        - button[2]: Stop signal (triangle)
+        - button[3]: Raise both hinges to top position
+        - button[1]: Lower both hinges to bottom position
         """
         
         # Reset twist message
@@ -136,27 +154,30 @@ class DiffJoyControl(Node):
             )
         
         # Handle hinge control buttons
-        if len(msg.buttons) > 2:
-            # Button 2: Raise hinges to top position
-            if msg.buttons[2] and not self.prev_button_2:
-                # self.get_logger().info('Button 2 pressed - Raising hinges to top position')
+        if len(msg.buttons) > 3:
+            # Update triangle button state (button 2) - for stop signal only
+            self.triangle_button_pressed = bool(msg.buttons[2])
+            
+            # Button 3: Raise hinges to top position (edge-triggered)
+            if msg.buttons[3] and not self.prev_button_3:
+                # self.get_logger().info('Button 3 pressed - Raising hinges to top position')
                 self.left_hinge_pos = self.LEFT_HINGE_MIN   # 0.0 (top position for left)
-                self.right_hinge_pos = self.RIGHT_HINGE_MIN # 2.217 (top position for right)
+                self.right_hinge_pos = self.RIGHT_HINGE_MIN # 0.0 (top position for right)
                 self.publish_hinge_positions()
             
-            # Button 0: Lower hinges to bottom position  
-            if msg.buttons[0] and not self.prev_button_0:
-                # self.get_logger().info('Button 0 pressed - Lowering hinges to bottom position')
+            # Button 1: Lower hinges to bottom position (edge-triggered)
+            if msg.buttons[1] and not self.prev_button_1:
+                # self.get_logger().info('Button 1 pressed - Lowering hinges to bottom position')
                 self.left_hinge_pos = self.LEFT_HINGE_MAX   # -2.217 (bottom position for left)
-                self.right_hinge_pos = self.RIGHT_HINGE_MAX # 0.0 (bottom position for right)
+                self.right_hinge_pos = self.RIGHT_HINGE_MAX # 2.217 (bottom position for right)
                 self.publish_hinge_positions()
             
             # Update previous button states
-            self.prev_button_2 = msg.buttons[2]
-            self.prev_button_0 = msg.buttons[0]
+            self.prev_button_3 = msg.buttons[3]
+            self.prev_button_1 = msg.buttons[1]
         else:
             self.get_logger().warn(
-                f'Not enough buttons in Joy message. Expected at least 3, got {len(msg.buttons)}'
+                f'Not enough buttons in Joy message. Expected at least 4, got {len(msg.buttons)}'
             )
 
 
