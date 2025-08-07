@@ -4,50 +4,26 @@ import rclpy
 from rclpy.node import Node
 from sensor_msgs.msg import Joy
 from geometry_msgs.msg import Twist
-from std_msgs.msg import Float64MultiArray, Bool
+from std_srvs.srv import SetBool
 
 
 class DiffJoyControl(Node):
     def __init__(self):
         super().__init__('diff_joy_control')
         
-        # Constants for velocities
-        self.LINEAR_VEL = 2.0  # m/s
-        self.ANGULAR_VEL = 1.5  # rad/s
+        self.declare_parameter('linear_velocity', 2.0)
+        self.declare_parameter('angular_velocity', 1.5)
         
-        # Hinge position limits and step size
-        self.LEFT_HINGE_MIN = 0.0      # Lower limit for left hinge
-        self.LEFT_HINGE_MAX = -2.117   # Upper limit for left hinge
-        self.RIGHT_HINGE_MIN = 0.0     # Lower limit for right hinge
-        self.RIGHT_HINGE_MAX = 2.117   # Upper limit for right hinge
-        self.HINGE_STEP = 0.1          # Step size for hinge movement
+        self.linear_vel = self.get_parameter('linear_velocity').get_parameter_value().double_value
+        self.angular_vel = self.get_parameter('angular_velocity').get_parameter_value().double_value
         
-        # Current hinge positions
-        self.left_hinge_pos = 0.0
-        self.right_hinge_pos = 0.0
+        self.hinge_animation_in_progress = False
         
-        # Triangle button state tracking
-        self.triangle_button_pressed = False
-        
-        # Create publisher for cmd_vel topic
         self.twist_pub = self.create_publisher(Twist, 'cmd_vel', 10)
         
-        # Create publishers for hinge controllers
-        self.left_hinge_pub = self.create_publisher(
-            Float64MultiArray, 
-            '/left_hinge_controller/commands', 
-            10
-        )
-        self.right_hinge_pub = self.create_publisher(
-            Float64MultiArray, 
-            '/right_hinge_controller/commands', 
-            10
-        )
+        self.hinges_up_client = self.create_client(SetBool, 'set_hinges_up')
+        self.hinges_down_client = self.create_client(SetBool, 'set_hinges_down')
         
-        # Create publisher for octopus topic (triangle button status)
-        self.octopus_pub = self.create_publisher(Bool, '/octopus', 10)
-        
-        # Create subscriber for joy topic
         self.joy_sub = self.create_subscription(
             Joy,
             'joy',
@@ -55,73 +31,77 @@ class DiffJoyControl(Node):
             10
         )
         
-        # Timer for publishing octopus at 50Hz
-        self.octopus_timer = self.create_timer(0.02, self.publish_octopus)
-        
-        # Initialize messages
         self.twist_msg = Twist()
-        self.left_hinge_msg = Float64MultiArray()
-        self.right_hinge_msg = Float64MultiArray()
-        self.octopus_msg = Bool()
         
-        # Button press tracking to prevent continuous triggering
         self.prev_button_3 = False
         self.prev_button_1 = False
         
-        self.get_logger().info('Transporter Joy node initialized')
-        self.get_logger().info(f'Linear velocity: {self.LINEAR_VEL} m/s')
-        self.get_logger().info(f'Angular velocity: {self.ANGULAR_VEL} rad/s')
-        self.get_logger().info('Controls:')
-        self.get_logger().info('  Left stick Y (axis[1]): Forward/Backward')
-        self.get_logger().info('  Right stick X (axis[3]): Left/Right turn')
-        self.get_logger().info('  Button[2]: Stop signal (triangle)')
-        self.get_logger().info('  Button[3]: Raise hinges to top position')
-        self.get_logger().info('  Button[1]: Lower hinges to bottom position')
-        self.get_logger().info('Publishing triangle button status on /octopus at 50Hz')
-        self.get_logger().info('Listening for joystick input on /joy topic...')
-    
-    def publish_octopus(self):
-        """Publish triangle button status at 50Hz"""
-        self.octopus_msg.data = self.triangle_button_pressed
-        self.octopus_pub.publish(self.octopus_msg)
-    
-    def clamp_hinge_position(self, position, min_val, max_val):
-        """Clamp hinge position within limits"""
-        return max(min_val, min(max_val, position))
-    
-    def publish_hinge_positions(self):
-        """Publish current hinge positions"""
-        # Left hinge command
-        self.left_hinge_msg.data = [self.left_hinge_pos]
-        self.left_hinge_pub.publish(self.left_hinge_msg)
+        self.wait_for_services()
         
-        # Right hinge command
-        self.right_hinge_msg.data = [self.right_hinge_pos]
-        self.right_hinge_pub.publish(self.right_hinge_msg)
+        self.get_logger().info('Differential Drive Joy Control initialized')
         
-        # self.get_logger().info(
-        #     f'Hinge positions - Left: {self.left_hinge_pos:.3f}, Right: {self.right_hinge_pos:.3f}'
-        # )
+    def wait_for_services(self):
+        while not self.hinges_up_client.wait_for_service(timeout_sec=1.0):
+            self.get_logger().info('Waiting for set_hinges_up service...')
+        
+        while not self.hinges_down_client.wait_for_service(timeout_sec=1.0):
+            self.get_logger().info('Waiting for set_hinges_down service...')
+        
+        self.get_logger().info('All hinge control services available')
+    
+    def hinges_up_response_callback(self, future):
+        try:
+            response = future.result()
+            if response.success:
+                self.get_logger().info(f'Hinges UP completed: {response.message}')
+            else:
+                self.get_logger().warn(f'Hinges UP failed: {response.message}')
+        except Exception as e:
+            self.get_logger().error(f'Hinges UP service call failed: {str(e)}')
+        finally:
+            self.hinge_animation_in_progress = False
+    
+    def hinges_down_response_callback(self, future):
+        try:
+            response = future.result()
+            if response.success:
+                self.get_logger().info(f'Hinges DOWN completed: {response.message}')
+            else:
+                self.get_logger().warn(f'Hinges DOWN failed: {response.message}')
+        except Exception as e:
+            self.get_logger().error(f'Hinges DOWN service call failed: {str(e)}')
+        finally:
+            self.hinge_animation_in_progress = False
+    
+    def call_hinges_up_service(self):
+        if self.hinge_animation_in_progress:
+            self.get_logger().info('Hinge animation in progress, ignoring UP request')
+            return
+        
+        request = SetBool.Request()
+        request.data = True
+        
+        self.hinge_animation_in_progress = True
+        self.get_logger().info('Calling hinges UP service...')
+        
+        future = self.hinges_up_client.call_async(request)
+        future.add_done_callback(self.hinges_up_response_callback)
+    
+    def call_hinges_down_service(self):
+        if self.hinge_animation_in_progress:
+            self.get_logger().info('Hinge animation in progress, ignoring DOWN request')
+            return
+        
+        request = SetBool.Request()
+        request.data = True
+        
+        self.hinge_animation_in_progress = True
+        self.get_logger().info('Calling hinges DOWN service...')
+        
+        future = self.hinges_down_client.call_async(request)
+        future.add_done_callback(self.hinges_down_response_callback)
     
     def joy_callback(self, msg):
-        """
-        Process joystick input and publish Twist and hinge commands
-        
-        Axis mapping:
-        - axis[1]: Linear velocity (Vx)
-            > 0: +Vx (forward)
-            < 0: -Vx (backward)
-        - axis[3]: Angular velocity (Wz)
-            > 0: +Wz (turn left)
-            < 0: -Wz (turn right)
-            
-        Button mapping:
-        - button[2]: Stop signal (triangle)
-        - button[3]: Raise both hinges to top position
-        - button[1]: Lower both hinges to bottom position
-        """
-        
-        # Reset twist message
         self.twist_msg.linear.x = 0.0
         self.twist_msg.linear.y = 0.0
         self.twist_msg.linear.z = 0.0
@@ -129,66 +109,39 @@ class DiffJoyControl(Node):
         self.twist_msg.angular.y = 0.0
         self.twist_msg.angular.z = 0.0
         
-        # Check if we have enough axes
         if len(msg.axes) > 3:
-            # Process linear velocity (axis 1)
-            if abs(msg.axes[1]) > 0.1:  # Dead zone
-                self.twist_msg.linear.x = msg.axes[1] * self.LINEAR_VEL
+            if abs(msg.axes[1]) > 0.1:
+                self.twist_msg.linear.x = msg.axes[1] * self.linear_vel
             
-            # Process angular velocity (axis 3)
-            if abs(msg.axes[3]) > 0.1:  # Dead zone
-                self.twist_msg.angular.z = msg.axes[3] * self.ANGULAR_VEL
+            if abs(msg.axes[3]) > 0.1:
+                self.twist_msg.angular.z = msg.axes[3] * self.angular_vel
             
-            # Publish the twist message
             self.twist_pub.publish(self.twist_msg)
-            
-            # Log current velocities (optional - comment out if too verbose)
-            if abs(self.twist_msg.linear.x) > 0.01 or abs(self.twist_msg.angular.z) > 0.01:
-                self.get_logger().debug(
-                    f'Publishing: Vx={self.twist_msg.linear.x:.4f} m/s, '
-                    f'Wz={self.twist_msg.angular.z:.4f} rad/s'
-                )
         else:
-            self.get_logger().warn(
-                f'Not enough axes in Joy message. Expected at least 4, got {len(msg.axes)}'
-            )
+            self.get_logger().warn(f'Not enough axes in Joy message. Expected at least 4, got {len(msg.axes)}')
         
-        # Handle hinge control buttons
         if len(msg.buttons) > 3:
-            # Update triangle button state (button 2) - for stop signal only
-            self.triangle_button_pressed = bool(msg.buttons[2])
-            
-            # Button 3: Raise hinges to top position (edge-triggered)
             if msg.buttons[3] and not self.prev_button_3:
-                # self.get_logger().info('Button 3 pressed - Raising hinges to top position')
-                self.left_hinge_pos = self.LEFT_HINGE_MIN   # 0.0 (top position for left)
-                self.right_hinge_pos = self.RIGHT_HINGE_MIN # 0.0 (top position for right)
-                self.publish_hinge_positions()
+                self.call_hinges_up_service()
             
-            # Button 1: Lower hinges to bottom position (edge-triggered)
             if msg.buttons[1] and not self.prev_button_1:
-                # self.get_logger().info('Button 1 pressed - Lowering hinges to bottom position')
-                self.left_hinge_pos = self.LEFT_HINGE_MAX   # -2.217 (bottom position for left)
-                self.right_hinge_pos = self.RIGHT_HINGE_MAX # 2.217 (bottom position for right)
-                self.publish_hinge_positions()
+                self.call_hinges_down_service()
             
-            # Update previous button states
             self.prev_button_3 = msg.buttons[3]
             self.prev_button_1 = msg.buttons[1]
         else:
-            self.get_logger().warn(
-                f'Not enough buttons in Joy message. Expected at least 4, got {len(msg.buttons)}'
-            )
+            self.get_logger().warn(f'Not enough buttons in Joy message. Expected at least 4, got {len(msg.buttons)}')
 
 
 def main(args=None):
     rclpy.init(args=args)
     
+    node = DiffJoyControl()
+    
     try:
-        node = DiffJoyControl()
         rclpy.spin(node)
     except KeyboardInterrupt:
-        pass
+        node.get_logger().info('Shutting down Joy controller...')
     finally:
         node.destroy_node()
         rclpy.shutdown()

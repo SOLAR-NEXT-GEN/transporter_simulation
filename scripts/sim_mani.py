@@ -4,34 +4,32 @@ import rclpy
 from rclpy.node import Node
 from std_msgs.msg import Float64MultiArray, String, Bool
 from std_srvs.srv import SetBool
-import math
+import time
+
 
 class ManiSim(Node):
     def __init__(self):
         super().__init__('mani_sim')
         
-        # Hinge angle limits and positions
-        self.LEFT_HINGE_UP = 0.0      # Up position
-        self.LEFT_HINGE_DOWN = -2.07  # Down position
-        self.RIGHT_HINGE_UP = 0.0     # Up position  
-        self.RIGHT_HINGE_DOWN = 2.07  # Down position
+        self.declare_parameter('animation_step', 0.05)
+        self.declare_parameter('animation_rate', 20.0)
         
-        # Animation parameters
-        self.ANIMATION_STEP = 0.05    # Step size in radians
-        self.ANIMATION_RATE = 20      # Hz (50ms between steps)
-        self.ANIMATION_DURATION = 2.0 # seconds for full movement
+        self.animation_step = self.get_parameter('animation_step').get_parameter_value().double_value
+        animation_rate = self.get_parameter('animation_rate').get_parameter_value().double_value
         
-        # Current hinge positions
+        self.LEFT_HINGE_UP = 0.0
+        self.LEFT_HINGE_DOWN = -2.07
+        self.RIGHT_HINGE_UP = 0.0
+        self.RIGHT_HINGE_DOWN = 2.07
+        
         self.left_hinge_pos = 0.0
         self.right_hinge_pos = 0.0
         
-        # Animation state
         self.animating = False
         self.animation_target_left = 0.0
         self.animation_target_right = 0.0
-        self.animation_type = ""  # "UP" or "DOWN"
+        self.animation_type = ""
         
-        # Create publishers for hinge controllers
         self.left_hinge_pub = self.create_publisher(
             Float64MultiArray, 
             '/left_hinge_controller/commands', 
@@ -43,7 +41,6 @@ class ManiSim(Node):
             10
         )
         
-        # Status publisher for animation feedback
         self.animation_status_pub = self.create_publisher(
             String,
             '/hinge_animation_status',
@@ -56,7 +53,6 @@ class ManiSim(Node):
             10
         )
         
-        # Create services for hinge control
         self.hinges_down_service = self.create_service(
             SetBool,
             'set_hinges_down',
@@ -69,39 +65,25 @@ class ManiSim(Node):
             self.set_hinges_up_callback
         )
         
-        # Animation timer
         self.animation_timer = self.create_timer(
-            1.0 / self.ANIMATION_RATE,  # 50ms
-            self.animation_step
+            1.0 / animation_rate,
+            self.animation_step_callback
         )
         
-        # Initialize messages
         self.left_hinge_msg = Float64MultiArray()
         self.right_hinge_msg = Float64MultiArray()
         
-        self.get_logger().info('Mani_Sim node initialized with animation')
-        self.get_logger().info('Services available:')
-        self.get_logger().info('  /set_hinges_down - Lower both hinges (animated)')
-        self.get_logger().info('  /set_hinges_up - Raise both hinges (animated)')
-        self.get_logger().info('Topics:')
-        self.get_logger().info('  /hinge_animation_status - Animation status messages')
-        self.get_logger().info('  /hinge_animation_complete - Animation completion signal')
-        self.get_logger().info(f'Animation: {self.ANIMATION_DURATION}s duration, {self.ANIMATION_STEP} rad steps')
-    
+        self.get_logger().info('Mani Sim node initialized')
+        
     def publish_hinge_positions(self):
-        """Publish current hinge positions to controllers"""
-        # Left hinge
         self.left_hinge_msg.data = [self.left_hinge_pos]
         self.left_hinge_pub.publish(self.left_hinge_msg)
         
-        # Right hinge  
         self.right_hinge_msg.data = [self.right_hinge_pos]
         self.right_hinge_pub.publish(self.right_hinge_msg)
     
     def start_animation(self, target_left, target_right, animation_type):
-        """Start animated movement to target positions"""
         if self.animating:
-            self.get_logger().warn('Animation already in progress, ignoring new request')
             return False
         
         self.animation_target_left = target_left
@@ -109,40 +91,37 @@ class ManiSim(Node):
         self.animation_type = animation_type
         self.animating = True
         
-        # Publish status
         status_msg = String()
         status_msg.data = f"ANIMATING_{animation_type}"
         self.animation_status_pub.publish(status_msg)
         
         self.get_logger().info(f'Starting {animation_type} animation')
-        self.get_logger().info(f'  Left: {self.left_hinge_pos:.3f} → {target_left:.3f}')
-        self.get_logger().info(f'  Right: {self.right_hinge_pos:.3f} → {target_right:.3f}')
         
         return True
     
-    def animation_step(self):
-        """Execute one step of the animation"""
+    def wait_for_animation_complete(self):
+        """Wait for animation to complete (blocking)"""
+        while self.animating:
+            time.sleep(0.01)  # 10ms sleep
+    
+    def animation_step_callback(self):
         if not self.animating:
             return
         
-        # Calculate steps for left hinge
         left_diff = self.animation_target_left - self.left_hinge_pos
-        if abs(left_diff) < self.ANIMATION_STEP:
+        if abs(left_diff) < self.animation_step:
             self.left_hinge_pos = self.animation_target_left
         else:
-            self.left_hinge_pos += self.ANIMATION_STEP if left_diff > 0 else -self.ANIMATION_STEP
+            self.left_hinge_pos += self.animation_step if left_diff > 0 else -self.animation_step
         
-        # Calculate steps for right hinge
         right_diff = self.animation_target_right - self.right_hinge_pos
-        if abs(right_diff) < self.ANIMATION_STEP:
+        if abs(right_diff) < self.animation_step:
             self.right_hinge_pos = self.animation_target_right
         else:
-            self.right_hinge_pos += self.ANIMATION_STEP if right_diff > 0 else -self.ANIMATION_STEP
+            self.right_hinge_pos += self.animation_step if right_diff > 0 else -self.animation_step
         
-        # Publish current positions
         self.publish_hinge_positions()
         
-        # Check if animation is complete
         left_complete = abs(self.left_hinge_pos - self.animation_target_left) < 0.01
         right_complete = abs(self.right_hinge_pos - self.animation_target_right) < 0.01
         
@@ -150,15 +129,12 @@ class ManiSim(Node):
             self.finish_animation()
     
     def finish_animation(self):
-        """Complete the animation and notify"""
         self.animating = False
         
-        # Ensure exact target positions
         self.left_hinge_pos = self.animation_target_left
         self.right_hinge_pos = self.animation_target_right
         self.publish_hinge_positions()
         
-        # Publish completion status
         status_msg = String()
         status_msg.data = f"COMPLETE_{self.animation_type}"
         self.animation_status_pub.publish(status_msg)
@@ -168,47 +144,87 @@ class ManiSim(Node):
         self.animation_complete_pub.publish(complete_msg)
         
         self.get_logger().info(f'{self.animation_type} animation completed')
-        self.get_logger().info(f'  Final positions - Left: {self.left_hinge_pos:.3f}, Right: {self.right_hinge_pos:.3f}')
+    
+    def execute_animation_blocking(self, target_left, target_right, animation_type):
+        if self.animating:
+            return False, 'Animation already in progress'
+        
+        self.animation_target_left = target_left
+        self.animation_target_right = target_right
+        self.animation_type = animation_type
+        
+        status_msg = String()
+        status_msg.data = f"ANIMATING_{animation_type}"
+        self.animation_status_pub.publish(status_msg)
+        
+        self.get_logger().info(f'Starting {animation_type} animation')
+        
+        while True:
+            left_diff = self.animation_target_left - self.left_hinge_pos
+            if abs(left_diff) < self.animation_step:
+                self.left_hinge_pos = self.animation_target_left
+            else:
+                self.left_hinge_pos += self.animation_step if left_diff > 0 else -self.animation_step
+            
+            right_diff = self.animation_target_right - self.right_hinge_pos
+            if abs(right_diff) < self.animation_step:
+                self.right_hinge_pos = self.animation_target_right
+            else:
+                self.right_hinge_pos += self.animation_step if right_diff > 0 else -self.animation_step
+            
+            self.publish_hinge_positions()
+            
+            left_complete = abs(self.left_hinge_pos - self.animation_target_left) < 0.01
+            right_complete = abs(self.right_hinge_pos - self.animation_target_right) < 0.01
+            
+            if left_complete and right_complete:
+                break
+            
+            time.sleep(1.0 / 20.0)
+        
+        self.left_hinge_pos = self.animation_target_left
+        self.right_hinge_pos = self.animation_target_right
+        self.publish_hinge_positions()
+        
+        status_msg = String()
+        status_msg.data = f"COMPLETE_{animation_type}"
+        self.animation_status_pub.publish(status_msg)
+        
+        complete_msg = Bool()
+        complete_msg.data = True
+        self.animation_complete_pub.publish(complete_msg)
+        
+        self.get_logger().info(f'{animation_type} animation completed')
+        
+        return True, f'{animation_type} animation completed successfully'
     
     def set_hinges_down_callback(self, request, response):
-        """Service callback for lowering both hinges with animation"""
         try:
-            success = self.start_animation(
+            success, message = self.execute_animation_blocking(
                 self.LEFT_HINGE_DOWN,
                 self.RIGHT_HINGE_DOWN,
                 "DOWN"
             )
-            
             response.success = success
-            if success:
-                response.message = f'Started DOWN animation to loading position'
-            else:
-                response.message = 'Animation already in progress'
-            
+            response.message = message
         except Exception as e:
-            self.get_logger().error(f'Error starting DOWN animation: {str(e)}')
+            self.get_logger().error(f'Error in DOWN animation: {str(e)}')
             response.success = False
             response.message = f'Error: {str(e)}'
         
         return response
     
     def set_hinges_up_callback(self, request, response):
-        """Service callback for raising both hinges with animation"""
         try:
-            success = self.start_animation(
+            success, message = self.execute_animation_blocking(
                 self.LEFT_HINGE_UP,
                 self.RIGHT_HINGE_UP,
                 "UP"
             )
-            
             response.success = success
-            if success:
-                response.message = f'Started UP animation to transport position'
-            else:
-                response.message = 'Animation already in progress'
-            
+            response.message = message
         except Exception as e:
-            self.get_logger().error(f'Error starting UP animation: {str(e)}')
+            self.get_logger().error(f'Error in UP animation: {str(e)}')
             response.success = False
             response.message = f'Error: {str(e)}'
         
@@ -218,11 +234,12 @@ class ManiSim(Node):
 def main(args=None):
     rclpy.init(args=args)
     
+    node = ManiSim()
+    
     try:
-        node = ManiSim()
         rclpy.spin(node)
     except KeyboardInterrupt:
-        pass
+        node.get_logger().info('Shutting down Mani Sim...')
     finally:
         node.destroy_node()
         rclpy.shutdown()
